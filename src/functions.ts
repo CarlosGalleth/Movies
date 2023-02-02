@@ -92,6 +92,12 @@ export const updateMovie = async (
 
   const queryResult = await client.query(queryConfig);
 
+  if (!queryResult.rowCount) {
+    return response.status(404).json({
+      message: "Movie not found",
+    });
+  }
+
   return response.status(200).json(queryResult.rows[0]);
 };
 

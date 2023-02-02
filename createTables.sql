@@ -1,0 +1,7 @@
+CREATE TABLE movies(
+id BIGSERIAL PRIMARY KEY,
+name VARCHAR(50) NOT NULL,
+description VARCHAR(300),
+duration INTEGER, NOT NULL,
+price INTEGER, NOT NULL
+);

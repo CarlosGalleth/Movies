@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { QueryConfig } from "pg";
 import { client } from "./database";
 import { MovieRequiredKeys } from "./interfaces";
 
@@ -31,12 +32,12 @@ export const ensureDataIsValid = (
   return next();
 };
 
-export const ensureMovieExists = async (
+export const ensureNameIsUnique = async (
   request: Request,
   response: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const id: number = Number(request.params.id);
+  const movieName: string = request.body.name;
 
   const queryString: string = `
     SELECT
@@ -44,19 +45,21 @@ export const ensureMovieExists = async (
     FROM
       movies
     WHERE
-      id = $1;
+      name = $1;
   `;
 
-  const queryConfig = {
+  const queryConfig: QueryConfig = {
     text: queryString,
-    values: [id],
+    values: [movieName],
   };
 
   const queryResult = await client.query(queryConfig);
 
-  if (!queryResult.rowCount) {
-    return response.status(404).json({
-      message: "Movie not found",
+  console.log(queryResult);
+
+  if (queryResult.rowCount) {
+    return response.status(409).json({
+      message: "Movie name already in use",
     });
   }
 

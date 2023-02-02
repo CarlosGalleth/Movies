@@ -1,14 +1,14 @@
 import express, { Application } from "express";
 import { startDatabase } from "./database";
 import { deleteMovie, getMovies, postMovie, updateMovie } from "./functions";
-import { ensureDataIsValid, ensureMovieExists } from "./middlewares";
+import { ensureDataIsValid, ensureNameIsUnique } from "./middlewares";
 
 const app: Application = express();
 app.use(express.json());
 
-app.post("/movies", ensureDataIsValid, postMovie);
+app.post("/movies", ensureDataIsValid, ensureNameIsUnique, postMovie);
 app.get("/movies", getMovies);
-app.patch("/movies/:id", ensureMovieExists, updateMovie);
+app.patch("/movies/:id", ensureNameIsUnique, updateMovie);
 app.delete("/movies/:id", deleteMovie);
 
 app.listen(3000, async () => {
