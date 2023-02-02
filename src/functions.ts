@@ -2,15 +2,14 @@ import { Request, response, Response } from "express";
 import { QueryConfig } from "pg";
 import format from "pg-format";
 import { client } from "./database";
-import { IMovie, IMovieData } from "./interfaces";
-import { middleware } from "./middlewares";
+import { IMovie, IMovieData, IMovieQuery } from "./interfaces";
 
 export const postMovie = async (
   request: Request,
   response: Response
 ): Promise<Response> => {
   try {
-    const movieDataRequest: IMovie = middleware(request.body);
+    const movieDataRequest: IMovie = request.body;
 
     const queryString: string = format(
       `
@@ -24,12 +23,12 @@ export const postMovie = async (
       Object.values(movieDataRequest)
     );
 
-    const queryResult = await client.query(queryString);
+    const queryResult: IMovieQuery = await client.query(queryString);
     return response.status(201).json(queryResult.rows[0]);
   } catch (error) {
     if (error instanceof Error) {
       return response.status(400).json({
-        message: error.message,
+        message: `Internal server error`,
       });
     }
     return response.status(500).json({
@@ -67,6 +66,59 @@ export const getMovies = async (
   return response.status(200).json(queryResult.rows);
 };
 
-export const updateMovie = (request: Request, response: Response) => {
-  return response;
+export const updateMovie = async (
+  request: Request,
+  response: Response
+): Promise<Response> => {
+  const id: number = Number(request.params.id);
+  const movieData: any = Object.values(request.body);
+
+  const queryString: string = format(`
+    UPDATE
+      movies
+    SET
+      name = $1,
+      description = $2,
+      duration = $3,
+      price = $4
+    WHERE
+      id = $5
+    RETURNING *;
+  `);
+  const queryConfig: QueryConfig = {
+    text: queryString,
+    values: [...movieData, id],
+  };
+
+  const queryResult = await client.query(queryConfig);
+
+  return response.status(200).json(queryResult.rows[0]);
+};
+
+export const deleteMovie = async (
+  request: Request,
+  response: Response
+): Promise<Response> => {
+  const id: number = Number(request.params.id);
+
+  const queryString: string = `
+        DELETE FROM
+          movies
+        WHERE
+          id = $1;
+  `;
+  const queryConfig: QueryConfig = {
+    text: queryString,
+    values: [id],
+  };
+
+  const queryResult = await client.query(queryConfig);
+
+  if (!queryResult.rowCount) {
+    return response.status(404).json({
+      message: "Movie not found",
+    });
+  }
+
+  return response.status(204).json();
 };

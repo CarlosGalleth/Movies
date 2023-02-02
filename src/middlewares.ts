@@ -1,29 +1,64 @@
-import { NextFunction } from "express";
-import { IMovie, MovieRequiredKeys } from "./interfaces";
+import { NextFunction, Request, Response } from "express";
+import { client } from "./database";
+import { MovieRequiredKeys } from "./interfaces";
 
-export const middleware = (payload: any): IMovie => {
-  const keys: Array<string> = Object.keys(payload);
+export const ensureDataIsValid = (
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Response | void => {
+  const keys: Array<string> = Object.keys(request.body);
   const requiredKeys: Array<MovieRequiredKeys> = ["name", "duration", "price"];
+
   const containsAllRequired: boolean = requiredKeys.every((key: string) => {
     return keys.includes(key);
   });
 
   if (!containsAllRequired) {
-    throw new Error(`Required keys are: ${requiredKeys}`);
-  }
-  if (keys.length > requiredKeys.length) {
-    throw new Error(`Required keys are: ${requiredKeys}`);
+    return response.status(400).json({
+      message: `Required keys are: ${requiredKeys}`,
+    });
   }
 
-  return payload;
+  const { name, description, duration, price } = request.body;
+  request.validateBody = {
+    name,
+    description,
+    duration,
+    price,
+  };
+
+  return next();
 };
 
-export const ensureMovieExists = (
+export const ensureMovieExists = async (
   request: Request,
   response: Response,
   next: NextFunction
-): Response | void => {
-  const teste = request.body;
-  console.log(teste);
+): Promise<Response | void> => {
+  const id: number = Number(request.params.id);
+
+  const queryString: string = `
+    SELECT
+      *
+    FROM
+      movies
+    WHERE
+      id = $1;
+  `;
+
+  const queryConfig = {
+    text: queryString,
+    values: [id],
+  };
+
+  const queryResult = await client.query(queryConfig);
+
+  if (!queryResult.rowCount) {
+    return response.status(404).json({
+      message: "Movie not found",
+    });
+  }
+
   return next();
 };
